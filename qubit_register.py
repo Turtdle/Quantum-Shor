@@ -4,4 +4,5 @@ class Qubit_Register:
         self.numBits = numBits
         self.numStates = 1 << numBits
         self.entagled = []
-        self.bits = [Qubit() for i in range(numBits)]
+        self.bits = [Qubit() for i in range(numBits)]\
+        

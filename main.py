@@ -1,17 +1,31 @@
 from qubit import Qubit
+from qubit_functions import Qubit_Functions
 import numpy as np
+def NKron(*args):
+  """Calculate a Kronecker product over a variable number of inputs"""
+  result = np.array([[1.0]])
+  for op in args:
+    result = np.kron(result, op)
+  return result
 def main():
-    ZeroZero = Qubit(np.array([[1, 0], [0, 0]]))
-    OneOne = Qubit(np.array([[0, 0], [0, 1]]))
-    PlusPlus = Qubit(np.array([[0.5, 0.5], [0.5, 0.5]]))
-    CatState = ZeroZero+OneOne
-    print(ZeroZero+OneOne)
-    CatState.normalize()
+    Zero = Qubit(np.array([1,0]))
+    One = Qubit(np.array([0,1]))
+    ZeroZero = Zero * Zero
+    OneOne = One * One
+    Plus = Qubit((Zero.state + One.state) / np.sqrt(2))
+    PlusPlus = Plus * Plus
+    CatState = Qubit((ZeroZero.state + OneOne.state) / np.sqrt(2))
     print(CatState)
-    print(CatState.first()[0])
-    print(CatState.first()[1])
-    print(CatState.second()[0])
-    print(CatState.second()[1])
+    CatStateT = np.dot(CatState.state, CatState.state.T)
+    print(CatStateT)
+    P0 = np.array([Zero, Zero.state.T])
+    P1 = np.array([One, One.state.T])
+    X = np.array([[0,1],
+              [1,0]])
+    Prob0 = np.trace(np.dot(NKron(P0, Id), RhoCatState))
+    print(Prob0)
+
+    
 
 
 if __name__ == "__main__":

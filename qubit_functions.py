@@ -1,7 +1,8 @@
 import numpy as np
 from qubit import Qubit
-
-class ControlledGate:
+import scipy as sp
+import scipy.linalg
+class Qubit_Functions:
     def __init__(self):
         self.cnot = np.array([[1, 0, 0, 0],
                                 [0, 1, 0, 0],
@@ -23,3 +24,5 @@ class ControlledGate:
                                 [0, 0, 0, 0, 0, 1, 0, 0],
                                 [0, 0, 0, 0, 0, 0, 0, 1],
                                 [0, 0, 0, 0, 0, 0, 1, 0]])
+    def normalize(self, state):
+        return state / sp.linalg.norm(state)
