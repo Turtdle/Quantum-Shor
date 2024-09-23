@@ -1,9 +1,11 @@
 import numpy as np
+import scipy as sp
+import scipy.linalg
 
 class Qubit:
     def __init__(self, state=np.array([[1, 0], [0, 1]])):
         self.state = state
-
+        self.NormalizeState = lambda state: state / sp.linalg.norm(state)
     def __str__(self):
         return str(self.state)
 
@@ -20,6 +22,10 @@ class Qubit:
     def z_gate(self):
         z_matrix = np.array([[1, 0], [0, -1]])
         self.state = np.matmul(z_matrix, self.state)
+        return self
+
+    def normalize(self):
+        self.state = self.NormalizeState(self.state)
         return self
 
 def main():
