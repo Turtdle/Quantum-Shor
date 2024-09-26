@@ -1,32 +1,41 @@
-from qubit import Qubit
+from qubit_register import Qubit_Register
 from qubit_functions import Qubit_Functions
-import numpy as np
-def NKron(*args):
-  """Calculate a Kronecker product over a variable number of inputs"""
-  result = np.array([[1.0]])
-  for op in args:
-    result = np.kron(result, op)
-  return result
+from math import pi
+
 def main():
-    Zero = Qubit(np.array([1,0]))
-    One = Qubit(np.array([0,1]))
-    ZeroZero = Zero * Zero
-    OneOne = One * One
-    Plus = Qubit((Zero.state + One.state) / np.sqrt(2))
-    PlusPlus = Plus * Plus
-    CatState = Qubit((ZeroZero.state + OneOne.state) / np.sqrt(2))
-    print(CatState)
-    CatStateT = np.dot(CatState.state, CatState.state.T)
-    print(CatStateT)
-    P0 = np.array([Zero, Zero.state.T])
-    P1 = np.array([One, One.state.T])
-    X = np.array([[0,1],
-              [1,0]])
-    Prob0 = np.trace(np.dot(NKron(P0, Id), RhoCatState))
-    print(Prob0)
-
+    q1 = Qubit_Register(4)
+    q2 = Qubit_Register(4)
+    carry = Qubit_Register(4)
+    qf = Qubit_Functions()
     
+    # Set q1 to represent 5 (0101 in binary)
+    q1[1].x_gate()
+    q1[3].x_gate()
+    
+    # Set q2 to represent 7 (0111 in binary)  
+    q2[1].x_gate()
+    q2[2].x_gate()
+    q2[3].x_gate()
+    print(q1.measure())
+    print(q2.measure())    
+    for i in range(3):
+        qf.cnot(q1[i], carry[i+1])
+        qf.cnot(q2[i], carry[i+1])
 
+        qf.toffoli(carry[i], q1[i], q2[i])
+    
+    qf.cnot(carry[3], q2[3])
+    result = int(''.join(str(x) for x in q2.measure()[::-1]), 2)
+    print("5 + 7 =", result)
 
 if __name__ == "__main__":
     main()
+
+    """
+    output: 
+    ['[1 0]', '[1 0]', '[1 0]']
+  ['[0.70710678 0.70710678]', '[0.70710678 0.70710678]', '[0.70710678 0.70710678]']
+  ['[1. 0.]', '[1. 0.]', '[1. 0.]']
+  [0, 0, 0]
+  5 + 7 = 15 ???
+  """

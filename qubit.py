@@ -90,3 +90,6 @@ class Qubit:
         else:
             self.state = np.array([0, 1], dtype=complex)
             return 1
+    def h(self):
+        self.state = np.matmul(self.Hadamard, self.state)
+        return self
