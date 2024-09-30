@@ -13,24 +13,25 @@ def quantum_full_adder(a, b, cin):
     q_b = Qubit([1, 0] if b == 0 else [0, 1])
     q_cin = Qubit([1, 0] if cin == 0 else [0, 1])
     q_cout = Qubit()
+
     cnot_gate(q_a, q_b)
     cnot_gate(q_cin, q_b)
     toffoli_gate(q_a, q_cin, q_cout)
     toffoli_gate(q_a, q_b, q_cout)
+
     sum_bit = q_b.measure()
     carry_out = q_cout.measure()
 
     return sum_bit, carry_out
 
-
 def quantum_4bit_adder(a, b):
     if not (0 <= a < 16 and 0 <= b < 16):
         raise ValueError("Inputs must be 4-bit numbers (0-15)")
 
+
     a_bits = [int(x) for x in f"{a:04b}"]
     b_bits = [int(x) for x in f"{b:04b}"]
-    print(a_bits)
-    print(b_bits)
+
     result_bits = []
     carry = 0
 
@@ -42,4 +43,3 @@ def quantum_4bit_adder(a, b):
         print("Warning: Overflow occurred")
 
     return int(''.join(map(str, result_bits)), 2)
-
