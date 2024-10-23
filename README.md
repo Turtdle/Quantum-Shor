@@ -37,5 +37,5 @@ Contributions are welcome. Please submit a Pull Request.
 
 ## Credits
 
-minutephysics (youtube) https://www.youtube.com/watch?v=lvTqbM5Dq
-wikipedia for everything else
+1. minutephysics (youtube) https://www.youtube.com/watch?v=lvTqbM5Dq4Q
+2. wikipedia for everything else
