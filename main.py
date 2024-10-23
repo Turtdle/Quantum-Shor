@@ -64,7 +64,7 @@ def controlled_phase_gate(phase, n, control, target):
 
 def shors_algorithm(N):
     """
-    Main implementation of Shor's algorithm
+    Main implementation of Shor's algorithm recursively
     Args:
         N: The number to factor
     Returns:
