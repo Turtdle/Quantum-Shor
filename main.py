@@ -1,33 +1,25 @@
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
-from math import gcd
+from math import gcd, log2, ceil
 from fractions import Fraction
 import numpy as np
+from sympy import isprime
 
 def create_qpe_circuit(a: int, N: int, n_count: int, n_power: int) -> QuantumCircuit:
-    """
-    Creates Quantum Phase Estimation circuit
+    max_qubits = 20  
+    if n_count + n_power > max_qubits:
+        n_count = max_qubits - n_power
+        
     
-    Args:
-        a: Base of the modular exponentiation
-        N: Modulus
-        n_count: Number of counting qubits
-        n_power: Number of qubits for modular exponentiation
-    """
     qr_count = QuantumRegister(n_count, 'count')
     qr_power = QuantumRegister(n_power, 'power')
     cr = ClassicalRegister(n_count, 'c')
     qc = QuantumCircuit(qr_count, qr_power, cr)
-
-    # Initialize power register to |1>
     qc.x(qr_power[0])
 
-    # Initialize count register in superposition
     for i in range(n_count):
         qc.h(qr_count[i])
-
-    # Apply controlled rotations
-    for i in range(n_count):
+    for i in range(min(n_count, 8)): 
         angle = 2 * np.pi * pow(a, 2**i, N) / N
         qc.cp(angle, qr_count[i], qr_power[0])
 
@@ -39,104 +31,103 @@ def create_qpe_circuit(a: int, N: int, n_count: int, n_power: int) -> QuantumCir
             qc.cp(-np.pi/float(2**(j-m)), qr_count[m], qr_count[j])
         qc.h(qr_count[j])
 
-    # Measure counting register
     qc.measure(qr_count, cr)
     
     return qc
 
 def find_period(a: int, N: int) -> int:
-    """
-    Quantum period finding routine
-    
-    Args:
-        a: Base of the modular exponentiation
-        N: Modulus
-    
-    Returns:
-        The period r such that a^r mod N = 1
-    """
-    n_count = 2 * len(bin(N)[2:])  # Number of counting qubits
-    n_power = len(bin(N)[2:])      # Number of qubits for modular exponentiation
 
-    qc = create_qpe_circuit(a, N, n_count, n_power)
+    n_power = ceil(log2(N))
+    n_count = min(2 * n_power, 12)
     
-    # Run on simulator
-    backend = AerSimulator()
-    shots = 1000
-    transpiled_qc = transpile(qc, backend)
-    result = backend.run(transpiled_qc, shots=shots).result()
-    counts = result.get_counts()
-    
-    # Process results
-    measured_phases = []
-    for output in counts:
-        phase = int(output, 2) / (2**n_count)
-        measured_phases.extend([phase] * counts[output])
-    
-    # Find the period from the phases
-    for phase in measured_phases:
-        frac = Fraction(phase).limit_denominator(N)
-        r = frac.denominator
-        if r % 2 == 0 and pow(a, r, N) == 1:
-            return r
+    try:
+        qc = create_qpe_circuit(a, N, n_count, n_power)
+
+        backend = AerSimulator(
+            method='statevector',
+            max_parallel_experiments=1,
+            max_parallel_shots=1
+        )
+
+        shots = 100
+        transpiled_qc = transpile(qc, backend, optimization_level=1)
+        result = backend.run(transpiled_qc, shots=shots).result()
+        counts = result.get_counts()
+
+        measured_phases = []
+        for output in counts:
+            phase = int(output, 2) / (2**n_count)
+            measured_phases.extend([phase] * counts[output])
+
+        for phase in measured_phases:
+            frac = Fraction(phase).limit_denominator(N)
+            r = frac.denominator
+            if r % 2 == 0 and pow(a, r, N) == 1:
+                return r
+                
+    except Exception as e:
+
+        return None
     
     return None
 
-def shors_algorithm(N: int, max_attempts: int = 10) -> tuple:
-    """
-    Main implementation of Shor's algorithm
-    
-    Args:
-        N: Number to factor
-        max_attempts: Maximum number of attempts to find factors
-    
-    Returns:
-        Tuple of two factors of N
-    """
+def classical_period_finding(a: int, N: int, max_tries: int = 100) -> int:
+
+    value = a
+    for r in range(1, max_tries):
+        if value == 1:
+            return r
+        value = (value * a) % N
+    return None
+
+def shors_algorithm(N: int, max_attempts: int = 5) -> tuple:
+
     if N % 2 == 0:
         return 2, N//2
     
     if is_prime(N):
         return N, 1
     
-    for _ in range(max_attempts):
-        # Choose random number a < N
-        a = np.random.randint(2, N)
+    
+    for attempt in range(max_attempts):
         
-        # Check if a and N are coprime
+        a = np.random.randint(2, N)
         if gcd(a, N) != 1:
             return gcd(a, N), N//gcd(a, N)
-        
-        # Find period using quantum subroutine
         r = find_period(a, N)
+        if r is None:
+            r = classical_period_finding(a, N)
         
         if r is None or r % 2 != 0:
             continue
+        try:
+            factor1 = gcd(pow(a, r//2) + 1, N)
+            factor2 = gcd(pow(a, r//2) - 1, N)
             
-        # Calculate potential factors
-        factor1 = gcd(pow(a, r//2) + 1, N)
-        factor2 = gcd(pow(a, r//2) - 1, N)
-        
-        if factor1 * factor2 == N and min(factor1, factor2) != 1:
-            return factor1, factor2
+            if factor1 * factor2 == N and min(factor1, factor2) != 1:
+                return factor1, factor2
+        except Exception as e:
+            continue
     
     return None, None
 
 def is_prime(n: int) -> bool:
-    """Simple primality test"""
-    if n < 2:
-        return False
-    for i in range(2, int(np.sqrt(n)) + 1):
-        if n % i == 0:
-            return False
-    return True
+    return isprime(n)
 
-if __name__ == "__main__":
-    # Example: Try to factor 15 (3 * 5)
-    N = 177221
-    print(f"Attempting to factor {N}...")
-    factors = shors_algorithm(N)
-    if factors[0] is not None:
-        print(f"Factors found: {factors}")
+def factor(n):
+    if isprime(n):
+        print(f'Factor {n} is prime.')
+        return n
     else:
-        print("Failed to find factors")
+        print(f'Factor {n} is not prime. Attempting to factorize...')
+    
+    factors = shors_algorithm(n)
+    while factors[0] == None or factors[1] == None:
+        factors = shors_algorithm(n)
+    
+    return factor(factors[0]), factor(factors[1])
+if __name__ == "__main__":
+    N = 1772217237
+    print(f"Factors: {factor(N)}")
+    
+    
