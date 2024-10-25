@@ -1,105 +1,142 @@
-from qutip import *
-import numpy as np
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit_aer import AerSimulator
 from math import gcd
 from fractions import Fraction
+import numpy as np
 
-def quantum_period_finding(a, N):
+def create_qpe_circuit(a: int, N: int, n_count: int, n_power: int) -> QuantumCircuit:
     """
-    Implements the quantum part of Shor's algorithm using QuTiP
+    Creates Quantum Phase Estimation circuit
+    
     Args:
-        a: the base number for period finding
-        N: the number to be factored
-    Returns:
-        The period of f(x) = a^x mod N
+        a: Base of the modular exponentiation
+        N: Modulus
+        n_count: Number of counting qubits
+        n_power: Number of qubits for modular exponentiation
     """
-    n = 2 * len(bin(N)[2:]) 
+    qr_count = QuantumRegister(n_count, 'count')
+    qr_power = QuantumRegister(n_power, 'power')
+    cr = ClassicalRegister(n_count, 'c')
+    qc = QuantumCircuit(qr_count, qr_power, cr)
+
+    # Initialize power register to |1>
+    qc.x(qr_power[0])
+
+    # Initialize count register in superposition
+    for i in range(n_count):
+        qc.h(qr_count[i])
+
+    # Apply controlled rotations
+    for i in range(n_count):
+        angle = 2 * np.pi * pow(a, 2**i, N) / N
+        qc.cp(angle, qr_count[i], qr_power[0])
+
+    # Apply inverse QFT
+    for i in range(n_count//2):
+        qc.swap(qr_count[i], qr_count[n_count-i-1])
+    for j in range(n_count):
+        for m in range(j):
+            qc.cp(-np.pi/float(2**(j-m)), qr_count[m], qr_count[j])
+        qc.h(qr_count[j])
+
+    # Measure counting register
+    qc.measure(qr_count, cr)
     
-    input_register = tensor([basis([2], 0) for _ in range(n)])
-    output_register = tensor([basis([2], 0) for _ in range(len(bin(N)[2:]))])
+    return qc
 
-    hadamard = snot()
-    for i in range(n):
-        input_register = hadamard * input_register
-    
-    def modular_exponentiation(state, a, N):
-        measurements = measure(state, create_measurement_gates(n))
-        x = int(''.join(str(m) for m in measurements), 2)
-
-        result = pow(a, x, N)
-
-        result_binary = format(result, f'0{len(bin(N)[2:])}b')
-        output_state = tensor([basis([2], int(b)) for b in result_binary])
-        
-        return tensor(state, output_state)
-    state = modular_exponentiation(input_register, a, N)
-    
-    def qft(n):
-        """Creates Quantum Fourier Transform operator for n qubits"""
-        qft_gate = Qobj([[1]])
-        for i in range(n):
-            qft_gate = tensor(qft_gate, hadamard)
-            for j in range(i+1, n):
-                phase = np.pi / (2**(j-i))
-                cphase = controlled_phase_gate(phase, n, i, j)
-                qft_gate = cphase * qft_gate
-        return qft_gate
-    qft_gate = qft(n)
-    final_state = qft_gate * state
-    measurements = measure(final_state, create_measurement_gates(n))
-    
-    measured_value = int(''.join(str(m) for m in measurements), 2)
-    fraction = Fraction(measured_value, 2**n).limit_denominator(N)
-    
-    return fraction.denominator
-
-def create_measurement_gates(n):
-    """Creates measurement operators for n qubits"""
-    return [sigmaz() for _ in range(n)]
-
-def controlled_phase_gate(phase, n, control, target):
-    """Creates a controlled phase gate"""
-    gate = identity([2**n])
-    gate[2**(control) + 2**(target), 2**(control) + 2**(target)] = np.exp(1j * phase)
-    return Qobj(gate)
-
-def shors_algorithm(N):
+def find_period(a: int, N: int) -> int:
     """
-    Main implementation of Shor's algorithm recursively
+    Quantum period finding routine
+    
     Args:
-        N: The number to factor
+        a: Base of the modular exponentiation
+        N: Modulus
+    
     Returns:
-        Two non-trivial factors of N, or None if factorization fails
+        The period r such that a^r mod N = 1
+    """
+    n_count = 2 * len(bin(N)[2:])  # Number of counting qubits
+    n_power = len(bin(N)[2:])      # Number of qubits for modular exponentiation
+
+    qc = create_qpe_circuit(a, N, n_count, n_power)
+    
+    # Run on simulator
+    backend = AerSimulator()
+    shots = 1000
+    transpiled_qc = transpile(qc, backend)
+    result = backend.run(transpiled_qc, shots=shots).result()
+    counts = result.get_counts()
+    
+    # Process results
+    measured_phases = []
+    for output in counts:
+        phase = int(output, 2) / (2**n_count)
+        measured_phases.extend([phase] * counts[output])
+    
+    # Find the period from the phases
+    for phase in measured_phases:
+        frac = Fraction(phase).limit_denominator(N)
+        r = frac.denominator
+        if r % 2 == 0 and pow(a, r, N) == 1:
+            return r
+    
+    return None
+
+def shors_algorithm(N: int, max_attempts: int = 10) -> tuple:
+    """
+    Main implementation of Shor's algorithm
+    
+    Args:
+        N: Number to factor
+        max_attempts: Maximum number of attempts to find factors
+    
+    Returns:
+        Tuple of two factors of N
     """
     if N % 2 == 0:
         return 2, N//2
     
-    if N < 3:
-        return None
-    a = np.random.randint(2, N)
+    if is_prime(N):
+        return N, 1
     
-    g = gcd(a, N)
-    if g > 1:
-        return g, N//g
-    r = quantum_period_finding(a, N)
-    if r % 2 != 0:
-        return shors_algorithm(N)
-    x = pow(a, r//2, N)
-    if x == N-1:
-        return shors_algorithm(N)
+    for _ in range(max_attempts):
+        # Choose random number a < N
+        a = np.random.randint(2, N)
+        
+        # Check if a and N are coprime
+        if gcd(a, N) != 1:
+            return gcd(a, N), N//gcd(a, N)
+        
+        # Find period using quantum subroutine
+        r = find_period(a, N)
+        
+        if r is None or r % 2 != 0:
+            continue
+            
+        # Calculate potential factors
+        factor1 = gcd(pow(a, r//2) + 1, N)
+        factor2 = gcd(pow(a, r//2) - 1, N)
+        
+        if factor1 * factor2 == N and min(factor1, factor2) != 1:
+            return factor1, factor2
     
-    p = gcd(x+1, N)
-    q = gcd(x-1, N)
-    
-    if p == N or q == N:
-        return shors_algorithm(N)
-    
-    return p, q
+    return None, None
 
+def is_prime(n: int) -> bool:
+    """Simple primality test"""
+    if n < 2:
+        return False
+    for i in range(2, int(np.sqrt(n)) + 1):
+        if n % i == 0:
+            return False
+    return True
 
 if __name__ == "__main__":
-    N = 15 
+    # Example: Try to factor 15 (3 * 5)
+    N = 177221
+    print(f"Attempting to factor {N}...")
     factors = shors_algorithm(N)
-    if factors:
-        print(f"Factors of {N} are: {factors[0]} and {factors[1]}")
+    if factors[0] is not None:
+        print(f"Factors found: {factors}")
     else:
-        print("Factorization failed")
+        print("Failed to find factors")
