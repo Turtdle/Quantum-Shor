@@ -4,6 +4,7 @@ from math import gcd, log2, ceil
 from fractions import Fraction
 import numpy as np
 from sympy import isprime
+from time import perf_counter_ns
 
 def create_qpe_circuit(a: int, N: int, n_count: int, n_power: int) -> QuantumCircuit:
     max_qubits = 20  
@@ -116,18 +117,22 @@ def is_prime(n: int) -> bool:
 
 def factor(n):
     if isprime(n):
-        print(f'Factor {n} is prime.')
+        #print(f'Factor {n} is prime.')
         return n
     else:
-        print(f'Factor {n} is not prime. Attempting to factorize...')
-    
+        #print(f'Factor {n} is not prime. Attempting to factorize...')
+        pass
     factors = shors_algorithm(n)
     while factors[0] == None or factors[1] == None:
         factors = shors_algorithm(n)
     
     return factor(factors[0]), factor(factors[1])
 if __name__ == "__main__":
-    N = 1772217237
-    print(f"Factors: {factor(N)}")
+    starting_time = perf_counter_ns()
+    print(f"Starting at nanosecond timestamp: {starting_time}")
+    N = 797991779
+    print(f"Factors: of {N}: {factor(N)}")
+    print(f"Time taken: {perf_counter_ns() - starting_time} ns")
+    print(f'Time in seconds: {(perf_counter_ns() - starting_time) / 1e9} s')
     
     
