@@ -148,7 +148,7 @@ def factor(n):
     total_cycles = factors[2] + cycles1 + cycles2
     
     return (factor1, factor2), total_cycles
-
+    
 def run_data(num):
     starting_time = perf_counter_ns()
     #print(f"Starting at nanosecond timestamp: {starting_time}")

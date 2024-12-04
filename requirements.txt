@@ -13,3 +13,4 @@ scipy==1.14.1
 six==1.16.0
 qiskit
 qiskit_aer
+pandas
