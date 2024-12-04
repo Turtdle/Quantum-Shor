@@ -4,9 +4,7 @@ A quantum computing implementation of Shor's algorithm using QuTiP (Quantum Tool
 
 ## Requirements
 
-- Python 3.7+
-- NumPy
-- QuTiP
+- See requirements.txt
 
 ## Installation
 
