@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 
 df = pd.read_csv('output.csv')
-filtered_df = df[df['computation_time'] > 00000000].copy()
+filtered_df = df[df['computation_time'] > 10000000000].copy()
 filtered_df = filtered_df.reset_index()
 avg_ns_per_cycle = (filtered_df['computation_time'] / filtered_df['total_quantum_cycles']).mean()
 
