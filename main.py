@@ -3,7 +3,7 @@ import csv
 import os
 
 data = []
-for i in range(6001, 20000):
+for i in range(0, 20000):
     data.append(run_data(i))
     if i % 100 == 0:
         print(f'on: {i}')

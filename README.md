@@ -1,26 +1,22 @@
 # Shor's Algorithm Implementation
 
-A quantum computing implementation of Shor's algorithm using QuTiP (Quantum Toolbox in Python) for integer factorization.
+A quantum computing implementation of Shor's algorithm using qiskit (Quantum Toolbox in Python) for integer factorization.
 
 ## Requirements
 
-- See requirements.txt
+- python 3.12
 
 ## Installation
 
 ```bash
-pip install numpy qutip
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-```python
-from shors_algorithm import shors_algorithm
-
-N = 15  # Number to factor
-factors = shors_algorithm(N)
-if factors:
-    print(f"Factors of {N} are: {factors[0]} and {factors[1]}")
+```bash
+python main.py #produces output.csv
+python grapher.py #requires output.csv to exist
 ```
 
 ## Limitations
@@ -28,10 +24,6 @@ if factors:
 - Educational implementation suitable for small numbers
 - Requires significant computational resources
 - May need multiple runs for successful factorization
-
-## Contributing
-
-Contributions are welcome. Please submit a Pull Request.
 
 ## Credits
 
